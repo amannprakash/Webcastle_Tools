@@ -24,14 +24,24 @@ pipeline {
             }
         }
 
+        stage('Verify Project Files') {
+            steps {
+                sh '''
+                    test -f "$WORKSPACE/$APP_DIR/package.json"
+                    test -f "$WORKSPACE/$APP_DIR/package-lock.json"
+                    echo "Project files verified."
+                '''
+            }
+        }
+
         stage('Install Dependencies') {
             steps {
                 sh '''
                     docker run --rm \
-                      -v "$WORKSPACE/$APP_DIR:/app" \
-                      -w /app \
+                      -v jenkins_home:/jenkins_home \
+                      -w "/jenkins_home/workspace/${JOB_NAME}/${APP_DIR}" \
                       "$NODE_IMAGE" \
-                      npm ci
+                      npm ci --no-audit --no-fund
                 '''
             }
         }
@@ -40,8 +50,8 @@ pipeline {
             steps {
                 sh '''
                     docker run --rm \
-                      -v "$WORKSPACE/$APP_DIR:/app" \
-                      -w /app \
+                      -v jenkins_home:/jenkins_home \
+                      -w "/jenkins_home/workspace/${JOB_NAME}/${APP_DIR}" \
                       "$NODE_IMAGE" \
                       npm run build
                 '''
@@ -54,7 +64,7 @@ pipeline {
             echo 'SUCCESS: Next.js production build completed.'
         }
         failure {
-            echo 'FAILED: Check the console output for the failing stage.'
+            echo 'FAILED: Check Console Output for details.'
         }
         always {
             echo 'Pipeline execution finished.'
